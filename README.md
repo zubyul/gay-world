@@ -24,6 +24,24 @@ python scripts/magic_todo_mlx.py --spice 3 "delete extra key in tailscale"
 echo "phone calling bot to call for quote" | python scripts/magic_todo_mlx.py --format md --spice 4
 ```
 
+### MCP Awareness
+
+The CLI auto-discovers MCP server names from well-known config files
+(`~/.copilot/mcp-config.json`, `~/.claude/mcp.json`, Claude Desktop, etc.)
+and injects them into the prompt so the model references your actual tools
+(e.g. "Search with exa" instead of "Google it").
+
+```bash
+# Auto-discovery (default)
+python scripts/magic_todo_mlx.py "find papers on active inference"
+
+# Extra config file
+python scripts/magic_todo_mlx.py --mcp-config ./my-mcp.json "send message to team"
+
+# Disable MCP awareness
+python scripts/magic_todo_mlx.py --no-mcp "deploy the app"
+```
+
 ## Emacs Setup
 
 Add to `~/.emacs.d/init.el`:

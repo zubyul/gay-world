@@ -29,6 +29,38 @@ from typing import Any, Iterable
 
 HF_CACHE_DEFAULT = Path.home() / ".cache" / "huggingface" / "hub"
 
+# Well-known MCP config file locations (relative to $HOME).
+_MCP_CONFIG_CANDIDATES = [
+    ".copilot/mcp-config.json",
+    ".claude/mcp.json",
+    ".roo/mcp.json",
+    ".goose/mcp_config.json",
+    ".cursor/mcp.json",
+    # Claude Desktop (macOS)
+    "Library/Application Support/Claude/claude_desktop_config.json",
+]
+
+
+def _discover_mcp_servers(extra_paths: list[str] | None = None) -> list[str]:
+    """Return sorted, deduplicated list of MCP server names from config files."""
+    home = Path.home()
+    paths = [home / c for c in _MCP_CONFIG_CANDIDATES]
+    if extra_paths:
+        paths = [Path(p).expanduser() for p in extra_paths] + paths
+
+    seen: set[str] = set()
+    for p in paths:
+        if not p.is_file():
+            continue
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        servers = data.get("mcpServers") or data.get("servers") or {}
+        if isinstance(servers, dict):
+            seen.update(servers.keys())
+    return sorted(seen)
+
 
 def _guess_cached_mlx_community_models(cache_root: Path) -> list[str]:
     if not cache_root.exists():
@@ -217,6 +249,7 @@ class GenCfg:
     top_p: float
     seed: int | None
     context: str | None = None
+    mcp_servers: list[str] | None = None
 
 
 def _build_messages(task: str, cfg: GenCfg) -> list[dict[str, str]]:
@@ -237,6 +270,14 @@ def _build_messages(task: str, cfg: GenCfg) -> list[dict[str, str]]:
         "  'write tests', 'test the', 'demo', 'verify', 'validate', 'double-check',\n"
         "  'audit', 'document'."
     )
+    if cfg.mcp_servers:
+        system += (
+            "\n\nThe user has these MCP (Model Context Protocol) tools available:\n"
+            + ", ".join(cfg.mcp_servers) + "\n"
+            "When a task involves capabilities one of these tools provides, "
+            "reference the tool by name in the step (e.g. 'Search with exa' or "
+            "'Send via signal')."
+        )
     user_parts = [
         f"{guidance}\n"
     ]
@@ -443,6 +484,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--top-p", type=float, default=0.9, help="Nucleus sampling top_p.")
     ap.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
     ap.add_argument("--context", type=str, default=None, help="Existing breakdowns for context.")
+    ap.add_argument("--mcp-config", type=str, action="append", default=None,
+                    help="Extra MCP config JSON file(s) to read server names from. May be repeated.")
+    ap.add_argument("--no-mcp", action="store_true",
+                    help="Disable auto-discovery of MCP servers.")
     ap.add_argument("--format", choices=["text", "md", "json"], default="text", help="Output format.")
     ap.add_argument("--list-models", action="store_true", help="List cached mlx-community models and exit.")
     ap.add_argument(
@@ -465,6 +510,8 @@ def main(argv: list[str]) -> int:
     if not task:
         ap.error("Provide a task as arguments or via stdin.")
 
+    mcp_servers = None if args.no_mcp else (_discover_mcp_servers(args.mcp_config) or None)
+
     cfg = GenCfg(
         model=args.model,
         spice=args.spice,
@@ -473,6 +520,7 @@ def main(argv: list[str]) -> int:
         top_p=args.top_p,
         seed=args.seed,
         context=args.context,
+        mcp_servers=mcp_servers,
     )
 
     plan = _generate_plan(task, cfg)
