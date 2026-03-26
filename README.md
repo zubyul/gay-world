@@ -1,10 +1,10 @@
-# scum-world
+# gay-world
 
 > *"Demos print and discard. Worlds compose and persist."*
 
 SCUM-scored task decomposition that returns **worlds**, not todos. Each breakdown is a composable, persistent `WorldType` — not an ephemeral checklist that gets checked and forgotten.
 
-Formerly `magic-todo-org`. Renamed because **todo is an antipattern**: it prints and discards. Worlds compose and persist.
+Formerly `magic-todo-org` → `scum-world` → `gay-world`. Todo is an antipattern: it prints and discards. Worlds compose and persist.
 
 ## The Shift
 
@@ -70,11 +70,11 @@ Auto-discovers MCP servers from `~/.claude/mcp.json` etc. and injects tool names
 ## Triad
 
 ```
-scum-resource (-1) ⊗ scum-world (0) ⊗ rent-a-human (+1) = 0 ✓
+scum-resource (-1) ⊗ gay-world (0) ⊗ rent-a-human (+1) = 0 ✓
 ```
 
 - **scum-resource**: System-level process scoring (what to kill)
-- **scum-world**: Task-level world decomposition (this repo)
+- **gay-world**: Task-level world decomposition (this repo)
 - **rent-a-human**: Channel H/Q dispatch when SCUM says delegate
 
 ## Requirements
