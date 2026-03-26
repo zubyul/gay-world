@@ -374,6 +374,37 @@ With prefix argument FORCE-PROMPT, always prompt for model/spice/task."
       (magic-todo-org--insert-checklist steps))
     (save-buffer)))
 
+;;;###autoload
+(defun magic-todo-org-regenerate-file (file)
+  "Regenerate all active TODO headings in FILE via magic-todo.
+FILE is a path to an org file.  Opens it non-interactively, iterates
+over every TODO-state heading, and calls `magic-todo-org-refresh-at-point'
+on each.  Saves the buffer when done.  Returns the count of tasks processed."
+  (let* ((file (expand-file-name file))
+         (buf (find-file-noselect file))
+         (count 0))
+    (with-current-buffer buf
+      (unless (derived-mode-p 'org-mode)
+        (org-mode))
+      (org-map-entries
+       (lambda ()
+         (when (and (org-get-todo-state)
+                    (not (member (org-get-todo-state) org-done-keywords)))
+           (condition-case err
+               (progn
+                 (magic-todo-org-refresh-at-point)
+                 (cl-incf count))
+             (error
+              (message "magic-todo-org-regenerate-file: skipped %s: %s"
+                       (nth 4 (org-heading-components))
+                       (error-message-string err))))))
+       nil 'file)
+      (when (> count 0)
+        (save-buffer)))
+    (message "magic-todo-org-regenerate-file: processed %d task(s) in %s"
+             count (file-name-nondirectory file))
+    count))
+
 (defface magic-todo-org-done-face
   '((t :strike-through t :foreground "gray50"))
   "Face for checked-off checkbox items."
